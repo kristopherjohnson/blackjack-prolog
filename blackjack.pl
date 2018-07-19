@@ -1,4 +1,7 @@
+#!/usr/bin/env swipl
+
 % Blackjack by Kristopher Johnson
+
 
 cards(Cards) :-
     Cards = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'].
@@ -115,4 +118,8 @@ print_cards([Head|Tail]) :-
 e :- edit(blackjack).
 
 :- run_tests.
+
+
+% vim: set ts=8 sw=4 tw=0 et :
+% vim: set ft=swiprolog :
 
