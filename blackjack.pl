@@ -1,15 +1,21 @@
 #!/usr/bin/env swipl
 
-% Blackjack by Kristopher Johnson
+/** <module> Blackjack
 
+ @author Kristopher Johnson
+ @license MIT
+*/
 
+%! cards(-Cards:list) is det.
 cards(Cards) :-
     Cards = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'].
 
+%! deck(-Deck:list) is det.
 deck(Deck) :-
     cards(Clubs), cards(Diamonds), cards(Hearts), cards(Spades),
     append([Clubs, Diamonds, Hearts, Spades], Deck).
 
+%! shuffled_deck(ShuffledDeck:list) is det.
 shuffled_deck(ShuffledDeck) :-
     deck(Deck),
     random_permutation(Deck, ShuffledDeck).
@@ -30,7 +36,7 @@ test(shuffled_deck) :-
 
 :- end_tests(deck_and_shuffled_deck).
 
-
+%! draw_card(+Deck:list, -Top, -Remainder:list) is semidet.
 draw_card([Top|Remainder], Top, Remainder).
 
 :- begin_tests(draw_card).
@@ -42,7 +48,7 @@ test(draw_card) :-
 
 :- end_tests(draw_card).
 
-
+%! new_hand(-PlayerCards:list, -DealerCards:list, -RemainingDeck:list) is det.
 new_hand([P1, P2], [D1, D2], RemainingDeck) :-
     shuffled_deck(Deck1),
     draw_card(Deck1, P1, Deck2),
@@ -62,7 +68,8 @@ test(new_hand) :-
 
 :- end_tests(new_hand).
 
-
+%! card_value(+Card, -Value) is nondet.
+%! card_value(-Card, +Value) is nondet.
 card_value('2',   2).
 card_value('3',   3).
 card_value('4',   4).
@@ -89,6 +96,7 @@ possible_hand_score(Cards, Score) :-
 possible_hand_scores(Cards, Scores) :-
     findall(S, possible_hand_score(Cards, S), Scores).
 
+%! hand_score(+Cards:list, +Score) is semidet.
 hand_score(Cards, Score) :-
     possible_hand_scores(Cards, S),
     exclude(bust, S, Under),
