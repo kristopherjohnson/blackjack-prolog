@@ -1,21 +1,29 @@
 #!/usr/bin/env swipl
 
-/** <module> Blackjack
+/** <module> Blackjack: Interactive console game
 
  @author Kristopher Johnson
  @license MIT
 */
 
-%! cards(-Cards:list) is det.
+%! cards(--Cards:list) is det.
+%
+% Returns a sorted list of 13 card ranks, Ace through King.
+%
+% Each rank is represented by an atom.
 cards(Cards) :-
     Cards = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'].
 
-%! deck(-Deck:list) is det.
+%! deck(--Deck:list) is det.
+%
+% Returns a sorted list of 52 cards.
 deck(Deck) :-
     cards(Clubs), cards(Diamonds), cards(Hearts), cards(Spades),
     append([Clubs, Diamonds, Hearts, Spades], Deck).
 
-%! shuffled_deck(ShuffledDeck:list) is det.
+%! shuffled_deck(--ShuffledDeck:list) is det.
+%
+% Returns a randomly-permuted list of 52 cards.
 shuffled_deck(ShuffledDeck) :-
     deck(Deck),
     random_permutation(Deck, ShuffledDeck).
@@ -37,6 +45,10 @@ test(shuffled_deck) :-
 :- end_tests(deck_and_shuffled_deck).
 
 %! draw_card(+Deck:list, -Top, -Remainder:list) is semidet.
+%
+% Given a list of cards, obtain the top card and list of remaining cards.
+%
+% Undefined if _Deck_ is empty.
 draw_card([Top|Remainder], Top, Remainder).
 
 :- begin_tests(draw_card).
@@ -48,7 +60,13 @@ test(draw_card) :-
 
 :- end_tests(draw_card).
 
-%! new_hand(-PlayerCards:list, -DealerCards:list, -RemainingDeck:list) is det.
+%! new_hand(--PlayerCards:list, --DealerCards:list, --RemainingDeck:list) is det.
+%
+% Initial state of a newly dealt hand, including lists of dealt cards and remaining cards in deck.
+%
+% @param PlayerCards list of two cards dealt to player
+% @param DealerCards list of two cards dealt to dealer
+% @param RemainingDeck list of remaining 48 cards in deck
 new_hand([P1, P2], [D1, D2], RemainingDeck) :-
     shuffled_deck(Deck1),
     draw_card(Deck1, P1, Deck2),
@@ -70,6 +88,11 @@ test(new_hand) :-
 
 %! card_value(+Card, -Value) is nondet.
 %! card_value(-Card, +Value) is nondet.
+%
+% Score associated with each type of card.
+%
+% Nondeterministic because Ace can be 1 or 11,
+% and because multiple cards have a score of 10.
 card_value('2',   2).
 card_value('3',   3).
 card_value('4',   4).
@@ -85,18 +108,35 @@ card_value('K',  10).
 card_value('A',  11).
 card_value('A',   1).
 
-has_21(Score) :- Score =:= 21.
-
+%! bust(+Score:int) is det.
+%
+% True if the _Score_ is greater than 21.
 bust(Score) :- Score > 21.
 
+%! possible_hand_score(+Cards:list, -Score:int) is nondet.
+%
+% Returns possible scores for the list of _Cards_.
+%
+% Nondeterministic because any Aces in the list may be
+% scored as either 1 or 11.
 possible_hand_score(Cards, Score) :-
     maplist(card_value, Cards, Values),
     sumlist(Values, Score).
 
+%! possible_hand_scores(+Cards:list, -Scores:list) is det.
+%
+% Returns all values of _possible_hand_score_ for the
+% specified _Cards_.
 possible_hand_scores(Cards, Scores) :-
     findall(S, possible_hand_score(Cards, S), Scores).
 
 %! hand_score(+Cards:list, +Score) is semidet.
+%
+% Determine _Score_ for the specified _Hand_.
+%
+% Returns the highest possible score that is less than
+% or equal to 21, or if that is not possible, then
+% return the minimum score over 21.
 hand_score(Cards, Score) :-
     possible_hand_scores(Cards, S),
     exclude(bust, S, Under),
@@ -118,12 +158,33 @@ test(hand_a_a_a)  :- hand_score(['A', 'A', 'A'],  13).
 
 :- end_tests(hand_score).
 
-
+%! print_cards(+Cards:list) is det.
+%
+% Prints list of card symbols separated by spaces.
+%
+% The list is terminated with a space.
 print_cards([]) :- !.
 print_cards([Head|Tail]) :-
     write(Head), write(' '), print_cards(Tail).
 
-e :- edit(blackjack).
+%! print_banner is det.
+%
+%! Show program title and copyright information.
+print_banner :-
+    write('Blackjack. Copyright 2018 Kristopher Johnson'), nl, nl.
+
+%! go is det.
+%
+% Program entry point
+go :-
+    print_banner.
+
+
+%! ed.
+%
+% Open the `blackjack.pl` file in the editor.
+ed :- edit(blackjack).
+
 
 :- run_tests.
 
