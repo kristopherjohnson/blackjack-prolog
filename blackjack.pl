@@ -6,6 +6,13 @@
  @license MIT
 */
 
+:- use_module(library(apply)).
+:- use_module(library(clpfd)).
+:- use_module(library(edit)).
+:- use_module(library(lists)).
+:- use_module(library(plunit)).
+:- use_module(library(random)).
+
 %! cards(--Cards:list) is det.
 %
 % Returns a sorted list of 13 card ranks, Ace through King.
@@ -32,7 +39,7 @@ shuffled_deck(ShuffledDeck) :-
 
 test(deck) :-
     deck(Deck),
-    length(Deck, L), L =:= 52,
+    length(Deck, L), L #= 52,
     cards(Cards), forall(member(C, Deck), member(C, Cards)),
     [C1, C2, C3, C4|_] = Deck,
     C1 = 'A', C2 = '2', C3 = '3', C4 = '4'.
@@ -111,7 +118,7 @@ card_value('A',   1).
 %! bust(+Score:int) is det.
 %
 % True if the _Score_ is greater than 21.
-bust(Score) :- Score > 21.
+bust(Score) :- Score #> 21.
 
 %! possible_hand_score(+Cards:list, -Score:int) is nondet.
 %
@@ -121,7 +128,7 @@ bust(Score) :- Score > 21.
 % scored as either 1 or 11.
 possible_hand_score(Cards, Score) :-
     maplist(card_value, Cards, Values),
-    sumlist(Values, Score).
+    sum_list(Values, Score).
 
 %! possible_hand_scores(+Cards:list, -Scores:list) is det.
 %
@@ -172,6 +179,21 @@ print_cards([Head|Tail]) :-
 %! Show program title and copyright information.
 print_banner :-
     write('Blackjack. Copyright 2018 Kristopher Johnson'), nl, nl.
+
+/*
+play_hand :-
+    new_hand(PlayerCards, DealerCards, RemainingHand)
+    dealt(PlayerCards, DealerCards, RemainingHand).
+
+dealt(PlayerCards, DealerCards, RemainingHand) :-
+    hand_score(PlayerCards, PlayerScore),
+    hand_score(DealerCards, DealerScore),
+    dealt(PlayerScore, DealerScore, PlayerCards, DealerCards, RemainingHand).
+
+dealt(21, 21, PlayerCards, DealerCards, RemainingHand) :-
+    push().
+
+*/
 
 %! go is det.
 %
