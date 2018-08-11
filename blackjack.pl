@@ -94,12 +94,11 @@ test(new_hand) :-
 :- end_tests(new_hand).
 
 %! card_value(+Card, -Value) is nondet.
-%! card_value(-Card, +Value) is nondet.
 %
 % Score associated with each type of card.
 %
-% Nondeterministic because Ace can be 1 or 11,
-% and because multiple cards have a score of 10.
+% Ace counts as 1.
+card_value('A',   1).
 card_value('2',   2).
 card_value('3',   3).
 card_value('4',   4).
@@ -112,56 +111,67 @@ card_value('10', 10).
 card_value('J',  10).
 card_value('Q',  10).
 card_value('K',  10).
-card_value('A',  11).
-card_value('A',   1).
 
 %! bust(+Score:int) is det.
 %
 % True if the _Score_ is greater than 21.
 bust(Score) :- Score #> 21.
 
-%! possible_hand_score(+Cards:list, -Score:int) is nondet.
+%! has_ace(Cards)
 %
-% Returns possible scores for the list of _Cards_.
+% True if Cards contains an 'A'.
+has_ace(Cards) :- member('A', Cards).
+
+%! hand_score(+Cards:list, -Score, -IsSoft) is semidet.
 %
-% Nondeterministic because any Aces in the list may be
-% scored as either 1 or 11.
-possible_hand_score(Cards, Score) :-
+% Determine _Score_ for the specified _Hand_.
+% IsSoft will be true if an Ace is counted as 11.
+%
+% Returns the highest possible score that is less than
+% or equal to 21, or if that is not possible, then
+% return the minimum score over 21.
+hand_score(Cards, Score, IsSoft) :-
+    has_ace(Cards), !,
+    hard_hand_score(Cards, HardScore),
+    score_with_ace(HardScore, Score, IsSoft).
+hand_score(Cards, Score, false) :-
+    hard_hand_score(Cards, Score).
+
+%! hard_hand_score(Cards, Score)
+%
+% Determine _Score_ counting all Aces as 1 point.
+hard_hand_score(Cards, Score) :-
     maplist(card_value, Cards, Values),
     sum_list(Values, Score).
 
-%! possible_hand_scores(+Cards:list, -Scores:list) is det.
+%! score_with_ace(-HardScore, +Score, +IsSoft).
 %
-% Returns all values of _possible_hand_score_ for the
-% specified _Cards_.
-possible_hand_scores(Cards, Scores) :-
-    findall(S, possible_hand_score(Cards, S), Scores).
+% Score for hand that includes at least one Ace.
+score_with_ace(HardScore, Score, true) :-
+    HardScore < 12, !,
+    Score is HardScore + 10.
+score_with_ace(HardScore, HardScore, false).
 
-%! hand_score(+Cards:list, +Score) is semidet.
+%! hand_score(+Cards:list, -Score) is semidet.
 %
 % Determine _Score_ for the specified _Hand_.
 %
 % Returns the highest possible score that is less than
 % or equal to 21, or if that is not possible, then
 % return the minimum score over 21.
-hand_score(Cards, Score) :-
-    possible_hand_scores(Cards, S),
-    exclude(bust, S, Under),
-    max_list(Under, Score), !.
-hand_score(Cards, Score) :-
-    possible_hand_scores(Cards, S),
-    min_list(S, Score).
+hand_score(Cards, Score) :- hand_score(Cards, Score, _).
+
 
 :- begin_tests(hand_score).
 
-test(hand_2_3)    :- hand_score(['2', '3'],        5).
-test(hand_j_q)    :- hand_score(['J', 'Q'],       20).
-test(hand_j_q_k)  :- hand_score(['J', 'Q', 'K'],  30).
-test(hand_10_q_a) :- hand_score(['10', 'Q', 'A'], 21).
-test(hand_10_a_a) :- hand_score(['10', 'A', 'A'], 12).
-test(hand_a_k)    :- hand_score(['A', 'K'],       21).
-test(hand_a_a)    :- hand_score(['A', 'A'],       12).
-test(hand_a_a_a)  :- hand_score(['A', 'A', 'A'],  13).
+test(hand_2_3)    :- hand_score(['2', '3'],        5, false).
+test(hand_j_q)    :- hand_score(['J', 'Q'],       20, false).
+test(hand_j_q_k)  :- hand_score(['J', 'Q', 'K'],  30, false).
+test(hand_10_q_a) :- hand_score(['10', 'Q', 'A'], 21, false).
+test(hand_10_a_a) :- hand_score(['10', 'A', 'A'], 12, false).
+test(hand_a_k)    :- hand_score(['A', 'K'],       21, true).
+test(hand_a_a)    :- hand_score(['A', 'A'],       12, true).
+test(hand_a_a_a)  :- hand_score(['A', 'A', 'A'],  13, true).
 
 :- end_tests(hand_score).
 
