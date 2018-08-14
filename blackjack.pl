@@ -13,7 +13,7 @@
 :- use_module(library(plunit)).
 :- use_module(library(random)).
 
-%! cards(--Cards:list) is det.
+%! cards(--Cards:list)
 %
 % Returns a sorted list of 13 card ranks, Ace through King.
 %
@@ -21,14 +21,14 @@
 cards(Cards) :-
     Cards = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'].
 
-%! deck(--Deck:list) is det.
+%! deck(--Deck:list)
 %
 % Returns a sorted list of 52 cards.
 deck(Deck) :-
     cards(Clubs), cards(Diamonds), cards(Hearts), cards(Spades),
     append([Clubs, Diamonds, Hearts, Spades], Deck).
 
-%! shuffled_deck(--ShuffledDeck:list) is det.
+%! shuffled_deck(--ShuffledDeck:list)
 %
 % Returns a randomly-permuted list of 52 cards.
 shuffled_deck(ShuffledDeck) :-
@@ -51,7 +51,7 @@ test(shuffled_deck) :-
 
 :- end_tests(deck_and_shuffled_deck).
 
-%! draw_card(+Deck:list, -Top, -Remainder:list) is semidet.
+%! draw_card(+Deck:list, -Top, -Remainder:list)
 %
 % Given a list of cards, obtain the top card and list of remaining cards.
 %
@@ -67,7 +67,7 @@ test(draw_card) :-
 
 :- end_tests(draw_card).
 
-%! new_hand(--PlayerCards:list, --DealerCards:list, --RemainingDeck:list) is det.
+%! new_hand(--PlayerCards:list, --DealerCards:list, --RemainingDeck:list)
 %
 % Initial state of a newly dealt hand, including lists of dealt cards and remaining cards in deck.
 %
@@ -93,7 +93,8 @@ test(new_hand) :-
 
 :- end_tests(new_hand).
 
-%! card_value(+Card, -Value) is nondet.
+
+%! card_value(+Card, -Value)
 %
 % Score associated with each type of card.
 %
@@ -112,7 +113,7 @@ card_value('J',  10).
 card_value('Q',  10).
 card_value('K',  10).
 
-%! bust(+Score:int) is det.
+%! bust(+Score:int)
 %
 % True if the _Score_ is greater than 21.
 bust(Score) :- Score #> 21.
@@ -122,7 +123,7 @@ bust(Score) :- Score #> 21.
 % True if Cards contains an 'A'.
 has_ace(Cards) :- member('A', Cards).
 
-%! hand_score(+Cards:list, -Score, -IsSoft) is semidet.
+%! hand_score(+Cards:list, -Score, -IsSoft)
 %
 % Determine _Score_ for the specified _Hand_.
 % IsSoft will be true if an Ace is counted as 11.
@@ -133,26 +134,26 @@ has_ace(Cards) :- member('A', Cards).
 hand_score(Cards, Score, IsSoft) :-
     has_ace(Cards), !,
     hard_hand_score(Cards, HardScore),
-    score_with_ace(HardScore, Score, IsSoft).
+    ( HardScore < 12 ->
+        Score #= HardScore + 10, IsSoft = true
+    ;
+        Score = HardScore, IsSoft = false
+    ).
 hand_score(Cards, Score, false) :-
     hard_hand_score(Cards, Score).
 
 %! hard_hand_score(Cards, Score)
 %
-% Determine _Score_ counting all Aces as 1 point.
-hard_hand_score(Cards, Score) :-
-    maplist(card_value, Cards, Values),
-    sum_list(Values, Score).
+% Determine _Score_ counting Aces as 1 point each.
+hard_hand_score(Cards, Score) :- hard_hand_score(Cards, 0, Score).
 
-%! score_with_ace(-HardScore, +Score, +IsSoft).
-%
-% Score for hand that includes at least one Ace.
-score_with_ace(HardScore, Score, true) :-
-    HardScore < 12, !,
-    Score is HardScore + 10.
-score_with_ace(HardScore, HardScore, false).
+hard_hand_score([], Score, Score) :- !.
+hard_hand_score([Card|Cards], Accum, Score) :-
+    card_value(Card, Value),
+    Accum2 #= Accum + Value,
+    hard_hand_score(Cards, Accum2, Score).
 
-%! hand_score(+Cards:list, -Score) is semidet.
+%! hand_score(+Cards:list, -Score)
 %
 % Determine _Score_ for the specified _Hand_.
 %
@@ -161,9 +162,9 @@ score_with_ace(HardScore, HardScore, false).
 % return the minimum score over 21.
 hand_score(Cards, Score) :- hand_score(Cards, Score, _).
 
-
 :- begin_tests(hand_score).
 
+test(hand_empty)  :- hand_score([],                0, false).
 test(hand_2_3)    :- hand_score(['2', '3'],        5, false).
 test(hand_j_q)    :- hand_score(['J', 'Q'],       20, false).
 test(hand_j_q_k)  :- hand_score(['J', 'Q', 'K'],  30, false).
@@ -175,7 +176,8 @@ test(hand_a_a_a)  :- hand_score(['A', 'A', 'A'],  13, true).
 
 :- end_tests(hand_score).
 
-%! print_cards(+Cards:list) is det.
+
+%! print_cards(+Cards:list)
 %
 % Prints list of card symbols separated by spaces.
 %
@@ -184,7 +186,7 @@ print_cards([]) :- !.
 print_cards([Head|Tail]) :-
     write(Head), write(' '), print_cards(Tail).
 
-%! print_banner is det.
+%! print_banner
 %
 %! Show program title and copyright information.
 print_banner :-
@@ -205,7 +207,7 @@ dealt(21, 21, PlayerCards, DealerCards, RemainingHand) :-
 
 */
 
-%! go is det.
+%! go
 %
 % Program entry point
 go :-
