@@ -1,0 +1,55 @@
+/* State machine diagram for Blackjack           */
+/*                                               */
+/* Build with Graphviz:                          */
+/*                                               */
+/*  dot -Tpng blackjack_sm.gv >blackjack_sm.png  */
+
+digraph blackjack {
+
+edge [ fontsize=10, color=gray, arrowtail=odot ];
+
+go        [ style=bold ];
+game_over [ style=bold ];
+
+go -> new_deal;
+
+new_deal -> after_deal;
+
+next_hand -> new_deal                  [ label="continue" ];
+next_hand -> game_over                 [ label="game_over"     ];
+
+player_wins -> next_hand;
+push -> next_hand;
+dealer_wins -> next_hand               [ label="chips_remaining" ];
+dealer_wins -> game_over               [ label="out_of_chips" ];
+
+after_deal -> push                     [ label="both_have_21" ];
+after_deal -> player_wins              [ label="player_has_21" ];
+after_deal -> dealer_wins              [ label="dealer_has_21" ];
+after_deal -> choose_initial_action    [ label="play" ];
+
+choose_initial_action -> after_hit     [ label="hit" ];
+choose_initial_action -> dealer_turn   [ label="stand" ];
+
+after_hit -> dealer_wins               [ label="bust" ];
+after_hit -> dealer_turn               [ label="player_has_21" ];
+after_hit -> choose_action             [ label="player_under_21" ];
+
+choose_action -> after_hit             [ label="hit" ];
+choose_action -> dealer_turn           [ label="stand" ];
+
+dealer_turn -> after_dealer_hit        [ label="dealer_must_hit" ];
+dealer_turn -> after_dealer_stand      [ label="dealer_must_stand" ];
+
+after_dealer_hit -> after_dealer_hit   [ label="dealer_must_hit" ];
+after_dealer_hit -> after_dealer_stand [ label="dealer_must_stand" ];
+after_dealer_hit -> after_dealer_bust  [ label="dealer_bust" ];
+
+after_dealer_stand -> player_wins      [ label="player_beats_dealer" ];
+after_dealer_stand -> dealer_wins      [ label="dealer_beats_player" ];
+after_dealer_stand -> push             [ label="same_score" ];
+
+after_dealer_bust -> player_wins;
+
+}
+

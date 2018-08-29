@@ -12,6 +12,7 @@
 :- use_module(library(lists)).
 :- use_module(library(plunit)).
 :- use_module(library(random)).
+:- use_module(library(readutil)).
 
 %! cards(--Cards:list)
 %
@@ -46,7 +47,7 @@ test(deck) :-
 
 test(shuffled_deck) :-
     shuffled_deck(Deck),
-    length(Deck, L), L =:= 52,
+    length(Deck, L), L #= 52,
     cards(Cards), forall(member(C, Deck), member(C, Cards)).
 
 :- end_tests(deck_and_shuffled_deck).
@@ -67,31 +68,45 @@ test(draw_card) :-
 
 :- end_tests(draw_card).
 
-%! new_hand(--PlayerCards:list, --DealerCards:list, --RemainingDeck:list)
+%! new_hand(Hand)
 %
 % Initial state of a newly dealt hand, including lists of dealt cards and remaining cards in deck.
 %
-% @param PlayerCards list of two cards dealt to player
-% @param DealerCards list of two cards dealt to dealer
-% @param RemainingDeck list of remaining 48 cards in deck
-new_hand([P1, P2], [D1, D2], RemainingDeck) :-
+% @param Hand A hand term with player cards, dealer cards, and remaining deck.
+new_hand(hand([P1, P2], [D1, D2], Deck)) :-
     shuffled_deck(Deck1),
     draw_card(Deck1, P1, Deck2),
     draw_card(Deck2, D1, Deck3),
     draw_card(Deck3, P2, Deck4),
-    draw_card(Deck4, D2, RemainingDeck).
+    draw_card(Deck4, D2, Deck).
 
 :- begin_tests(new_hand).
 
 test(new_hand) :-
-    new_hand([P1, P2], [D1, D2], RemainingDeck),
+    new_hand(hand([P1, P2], [D1, D2], Deck)),
     cards(Cards),
     member(P1, Cards), member(P2, Cards),
     member(D1, Cards), member(D2, Cards),
     !,
-    length(RemainingDeck, L), L =:= 48.
+    length(Deck, L), L #= 48.
 
 :- end_tests(new_hand).
+
+
+%! player_cards(+Hand, -Cards).
+%
+% Extract player cards list from Hand.
+player_cards(hand(Pcards, _, _), Pcards).
+
+%! dealer_cards(+Hand, -Cards).
+%
+% Extract dealer cards list from Hand.
+dealer_cards(hand(_, Dcards, _), Dcards).
+
+%! deck(+Hand, -Cards).
+%
+% Extract remaining-deck cards list from Hand.
+deck(hand(_, _, Deck), Deck).
 
 
 %! card_value(+Card, -Value)
@@ -113,17 +128,12 @@ card_value('J',  10).
 card_value('Q',  10).
 card_value('K',  10).
 
-%! bust(+Score:int)
-%
-% True if the _Score_ is greater than 21.
-bust(Score) :- Score #> 21.
-
 %! has_ace(Cards)
 %
 % True if Cards contains an 'A'.
 has_ace(Cards) :- member('A', Cards).
 
-%! hand_score(+Cards:list, -Score, -IsSoft)
+%! cards_score(+Cards:list, -Score, -IsSoft)
 %
 % Determine _Score_ for the specified _Hand_.
 % IsSoft will be true if an Ace is counted as 11.
@@ -131,87 +141,249 @@ has_ace(Cards) :- member('A', Cards).
 % Returns the highest possible score that is less than
 % or equal to 21, or if that is not possible, then
 % return the minimum score over 21.
-hand_score(Cards, Score, IsSoft) :-
+cards_score(Cards, Score, IsSoft) :-
     has_ace(Cards), !,
-    hard_hand_score(Cards, HardScore),
-    ( HardScore < 12 ->
+    hard_cards_score(Cards, HardScore),
+    ( HardScore #< 12 ->
         Score #= HardScore + 10, IsSoft = true
     ;
         Score = HardScore, IsSoft = false
     ).
-hand_score(Cards, Score, false) :-
-    hard_hand_score(Cards, Score).
+cards_score(Cards, Score, false) :-
+    hard_cards_score(Cards, Score).
 
-%! hard_hand_score(Cards, Score)
+%! hard_cards_score(Cards, Score)
 %
 % Determine _Score_ counting Aces as 1 point each.
-hard_hand_score(Cards, Score) :- hard_hand_score(Cards, 0, Score).
+hard_cards_score(Cards, Score) :- hard_cards_score(Cards, 0, Score).
 
-hard_hand_score([], Score, Score) :- !.
-hard_hand_score([Card|Cards], Accum, Score) :-
+hard_cards_score([], Score, Score) :- !.
+hard_cards_score([Card|Cards], Accum, Score) :-
     card_value(Card, Value),
     Accum2 #= Accum + Value,
-    hard_hand_score(Cards, Accum2, Score).
+    hard_cards_score(Cards, Accum2, Score).
 
-%! hand_score(+Cards:list, -Score)
+%! cards_score(+Cards:list, -Score)
 %
 % Determine _Score_ for the specified _Hand_.
 %
 % Returns the highest possible score that is less than
 % or equal to 21, or if that is not possible, then
 % return the minimum score over 21.
-hand_score(Cards, Score) :- hand_score(Cards, Score, _).
+cards_score(Cards, Score) :- cards_score(Cards, Score, _).
 
-:- begin_tests(hand_score).
+:- begin_tests(cards_score).
 
-test(hand_empty)  :- hand_score([],                0, false).
-test(hand_2_3)    :- hand_score(['2', '3'],        5, false).
-test(hand_j_q)    :- hand_score(['J', 'Q'],       20, false).
-test(hand_j_q_k)  :- hand_score(['J', 'Q', 'K'],  30, false).
-test(hand_10_q_a) :- hand_score(['10', 'Q', 'A'], 21, false).
-test(hand_10_a_a) :- hand_score(['10', 'A', 'A'], 12, false).
-test(hand_a_k)    :- hand_score(['A', 'K'],       21, true).
-test(hand_a_a)    :- hand_score(['A', 'A'],       12, true).
-test(hand_a_a_a)  :- hand_score(['A', 'A', 'A'],  13, true).
+test(hand_empty)  :- cards_score([],                0, false).
+test(hand_2_3)    :- cards_score(['2', '3'],        5, false).
+test(hand_j_q)    :- cards_score(['J', 'Q'],       20, false).
+test(hand_j_q_k)  :- cards_score(['J', 'Q', 'K'],  30, false).
+test(hand_10_q_a) :- cards_score(['10', 'Q', 'A'], 21, false).
+test(hand_10_a_a) :- cards_score(['10', 'A', 'A'], 12, false).
+test(hand_a_k)    :- cards_score(['A', 'K'],       21, true).
+test(hand_a_a)    :- cards_score(['A', 'A'],       12, true).
+test(hand_a_a_a)  :- cards_score(['A', 'A', 'A'],  13, true).
 
-:- end_tests(hand_score).
+:- end_tests(cards_score).
 
 
-%! print_cards(+Cards:list)
+player_score(Hand, Score) :-
+    player_cards(Hand, Cards), cards_score(Cards, Score).
+
+dealer_score(Hand, Score) :-
+    dealer_cards(Hand, Cards), cards_score(Cards, Score).
+
+player_has_21(Hand) :-
+    player_score(Hand, Score), Score #= 21.
+
+dealer_has_21(Hand) :-
+    dealer_score(Hand, Score), Score #= 21.
+
+player_bust(Hand) :-
+    player_score(Hand, Score), Score #> 21.
+
+dealer_bust(Hand) :-
+    dealer_score(Hand, Score), Score #> 21.
+
+
+%! show_cards(+Cards:list)
 %
 % Prints list of card symbols separated by spaces.
 %
 % The list is terminated with a space.
-print_cards([]) :- !.
-print_cards([Head|Tail]) :-
-    write(Head), write(' '), print_cards(Tail).
+show_cards([]) :- !.
+show_cards([Head|Tail]) :-
+    write(Head), write(' '), show_cards(Tail).
 
-%! print_banner
+show_dealer_cards([_, UpCard]) :-
+    write('? '), write(UpCard).
+
+show_hand(Hand) :-
+    dealer_cards(Hand, Dcards),
+    player_cards(Hand, Pcards),
+    player_score(Hand, Score),
+    write('Dealer cards: '), show_dealer_cards(Dcards), nl,
+    write('Your cards:   '), show_cards(Pcards), nl,
+    write('Your total:   '), write(Score), nl.
+
+%! read_single_char_atom(--Atom)
+%
+% Read a single character from input, returning it as an atom.
+read_single_char_atom(Atom) :-
+    flush_output, get_single_char(Code),
+    % TODO: Handle Code #= -1, which is EOF
+    atom_codes(Atom, [Code]).
+
+%! play_hand
+%
+% Deal a new hand and play it through to the end.
+play_hand :-
+    write('New Deal'), nl, nl,
+    new_hand(Hand),
+    show_hand(Hand),
+    after_deal(Hand).
+
+%! dealt(++Hand)
+%
+% On a newly dealt hand, determine whether player or dealer has 21.
+%
+% If neither has 21, let player choose action.
+after_deal(Hand) :-
+    player_has_21(Hand), dealer_has_21(Hand), !,
+    push.
+after_deal(Hand) :-
+    player_has_21(Hand), !,
+    player_wins.
+after_deal(Hand) :-
+    dealer_has_21(Hand), !,
+    dealer_wins.
+after_deal(Hand) :-
+    dealt_player_action(Hand).
+
+%! dealt_player_action(++Hand)
+%
+% Read user's action right after a deal and execute it.
+dealt_player_action(Hand) :-
+    nl,
+    % TODO: Only show Split if player has a pair
+    write('Possible actions: h - Hit, s - Stand, d - Double down, p - Split'), nl,
+    write('Your action > '), read_single_char_atom(Action),
+    dealt_player_action(Hand, Action).
+
+%! player_action(++Hand)
+%
+% Read player's action and execute it.
+player_action(Hand) :-
+    nl,
+    write('Possible actions: h - Hit, s - Stand'), nl,
+    write('Your action > '), read_single_char_atom(Action),
+    player_action(Hand, Action).
+
+%! dealt_player_action(++Hand, ++Action).
+%
+% Handle player action after deal.
+%
+% Possible actions are
+%
+% - 'h' Hit
+% - 's' Stand
+% - 'd' Double down
+% - 'p' Split
+%
+% For any other input, prompt again.
+dealt_player_action(Hand, d) :-
+    !, write('Double down'), nl,
+    % TODO: Implement double down
+    write('Double down is not implemented'), nl,
+    dealt_player_action(Hand).
+dealt_player_action(Hand, p) :-
+    !, write('Split'), nl,
+    % TODO: Implement split
+    write('Split is not implemented'), nl,
+    dealt_player_action(Hand).
+dealt_player_action(Hand, h) :-
+    !, player_action(Hand, h).
+dealt_player_action(Hand, s) :-
+    !, player_action(Hand, s).
+dealt_player_action(Hand, Atom) :-
+    !, write(Atom), write(' - Invalid input'), nl,
+    dealt_player_action(Hand).
+
+%! player_action(++Hand, ++Action).
+%
+% Handle player action.
+%
+% Possible actions are
+%
+% - 'h' Hit
+% - 's' Stand
+%
+% For any other input, prompt again.
+player_action(Hand, h) :-
+    !, write('Hit'), nl,
+    deck(Hand, Deck),
+    player_cards(Hand, Cards),
+    dealer_cards(Hand, DealerCards),
+    draw_card(Deck, DealtCard, RemainingDeck),
+    append(Cards, [DealtCard], NewCards),
+    NewHand = hand(NewCards, DealerCards, RemainingDeck),
+    show_hand(NewHand),
+    after_hit(NewHand).
+player_action(Hand, s) :-
+    !, write('Stand'), nl,
+    dealer_actions(Hand).
+player_action(Hand, Atom) :-
+    !, write(Atom), write(' - Invalid input'), nl,
+    player_action(Hand).
+
+%! after_hit(++Hand)
+%
+% Determine what to do after player hits.
+after_hit(Hand) :-
+    player_has_21(Hand),
+    !, dealer_actions(Hand).
+after_hit(Hand) :-
+    player_bust(Hand),
+    !, after_bust(Hand).
+after_hit(Hand) :-
+    !, player_action(Hand).
+
+%! after_bust(++Hand)
+%
+% Player has total over 21. Dealer wins.
+after_bust(Hand) :-
+    % TODO: Show dealer cards.
+    dealer_wins.
+
+%! dealer_actions(++Hand).
+%
+% Handle dealer's turn after player stands.
+dealer_actions(Hand) :-
+    !, write('Dealer''s turn:'), nl.
+
+push :-
+    write('Push'), nl.
+
+player_wins :-
+    write('Player wins'), nl.
+
+dealer_wins :-
+    write('Dealer wins'), nl.
+
+next_hand :-
+    play_hand.
+
+%! show_banner
 %
 %! Show program title and copyright information.
-print_banner :-
+show_banner :-
     write('Blackjack. Copyright 2018 Kristopher Johnson'), nl, nl.
-
-/*
-play_hand :-
-    new_hand(PlayerCards, DealerCards, RemainingHand)
-    dealt(PlayerCards, DealerCards, RemainingHand).
-
-dealt(PlayerCards, DealerCards, RemainingHand) :-
-    hand_score(PlayerCards, PlayerScore),
-    hand_score(DealerCards, DealerScore),
-    dealt(PlayerScore, DealerScore, PlayerCards, DealerCards, RemainingHand).
-
-dealt(21, 21, PlayerCards, DealerCards, RemainingHand) :-
-    push().
-
-*/
 
 %! go
 %
 % Program entry point
 go :-
-    print_banner.
+    show_banner, play_hand.
 
 
 %! ed.
