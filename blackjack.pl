@@ -1,4 +1,4 @@
-#!/usr/bin/env swipl
+#!/usr/bin/env swipl -g main -t halt
 
 /** <module> Blackjack: Interactive console game
 
@@ -6,11 +6,17 @@
  @license MIT
 */
 
+% Export the predicates tested by blackjack_tests.pl.
+:- module('blackjack', [
+    main/0,
+    deck/1, cards/1, shuffled_deck/1,
+    draw_card/3, new_hand/1, cards_score/3
+]).
+
 :- use_module(library(apply)).
 :- use_module(library(clpfd)).
 :- use_module(library(edit)).
 :- use_module(library(lists)).
-:- use_module(library(plunit)).
 :- use_module(library(random)).
 :- use_module(library(readutil)).
 
@@ -36,37 +42,12 @@ shuffled_deck(ShuffledDeck) :-
     deck(Deck),
     random_permutation(Deck, ShuffledDeck).
 
-:- begin_tests(deck_and_shuffled_deck).
-
-test(deck) :-
-    deck(Deck),
-    length(Deck, L), L #= 52,
-    cards(Cards), forall(member(C, Deck), member(C, Cards)),
-    [C1, C2, C3, C4|_] = Deck,
-    C1 = 'A', C2 = '2', C3 = '3', C4 = '4'.
-
-test(shuffled_deck) :-
-    shuffled_deck(Deck),
-    length(Deck, L), L #= 52,
-    cards(Cards), forall(member(C, Deck), member(C, Cards)).
-
-:- end_tests(deck_and_shuffled_deck).
-
 %! draw_card(+Deck:list, -Top, -Remainder:list)
 %
 % Given a list of cards, obtain the top card and list of remaining cards.
 %
 % Undefined if _Deck_ is empty.
 draw_card([Top|Remainder], Top, Remainder).
-
-:- begin_tests(draw_card).
-
-test(draw_card) :-
-    draw_card(['A', '2', '3', '4'], Top, Remainder),
-    Top = 'A',
-    Remainder = ['2', '3', '4'].
-
-:- end_tests(draw_card).
 
 %! new_hand(Hand)
 %
@@ -79,19 +60,6 @@ new_hand(hand([P1, P2], [D1, D2], Deck)) :-
     draw_card(Deck2, D1, Deck3),
     draw_card(Deck3, P2, Deck4),
     draw_card(Deck4, D2, Deck).
-
-:- begin_tests(new_hand).
-
-test(new_hand) :-
-    new_hand(hand([P1, P2], [D1, D2], Deck)),
-    cards(Cards),
-    member(P1, Cards), member(P2, Cards),
-    member(D1, Cards), member(D2, Cards),
-    !,
-    length(Deck, L), L #= 48.
-
-:- end_tests(new_hand).
-
 
 %! player_cards(+Hand, -Cards).
 %
@@ -107,7 +75,6 @@ dealer_cards(hand(_, Dcards, _), Dcards).
 %
 % Extract remaining-deck cards list from Hand.
 deck(hand(_, _, Deck), Deck).
-
 
 %! card_value(+Card, -Value)
 %
@@ -172,21 +139,6 @@ hard_cards_score([Card|Cards], Accum, Score) :-
 % return the minimum score over 21.
 cards_score(Cards, Score) :- cards_score(Cards, Score, _).
 
-:- begin_tests(cards_score).
-
-test(hand_empty)  :- cards_score([],                0, false).
-test(hand_2_3)    :- cards_score(['2', '3'],        5, false).
-test(hand_j_q)    :- cards_score(['J', 'Q'],       20, false).
-test(hand_j_q_k)  :- cards_score(['J', 'Q', 'K'],  30, false).
-test(hand_10_q_a) :- cards_score(['10', 'Q', 'A'], 21, false).
-test(hand_10_a_a) :- cards_score(['10', 'A', 'A'], 12, false).
-test(hand_a_k)    :- cards_score(['A', 'K'],       21, true).
-test(hand_a_a)    :- cards_score(['A', 'A'],       12, true).
-test(hand_a_a_a)  :- cards_score(['A', 'A', 'A'],  13, true).
-
-:- end_tests(cards_score).
-
-
 player_score(Hand, Score) :-
     player_cards(Hand, Cards), cards_score(Cards, Score).
 
@@ -199,10 +151,10 @@ player_has_21(Hand) :-
 dealer_has_21(Hand) :-
     dealer_score(Hand, Score), Score #= 21.
 
-player_bust(Hand) :-
+player_over_21(Hand) :-
     player_score(Hand, Score), Score #> 21.
 
-dealer_bust(Hand) :-
+dealer_over_21(Hand) :-
     dealer_score(Hand, Score), Score #> 21.
 
 
@@ -258,28 +210,28 @@ after_deal(Hand) :-
     dealer_has_21(Hand), !,
     dealer_wins.
 after_deal(Hand) :-
-    dealt_player_action(Hand).
+    choose_initial_action(Hand).
 
-%! dealt_player_action(++Hand)
+%! choose_initial_action(++Hand)
 %
 % Read user's action right after a deal and execute it.
-dealt_player_action(Hand) :-
+choose_initial_action(Hand) :-
     nl,
     % TODO: Only show Split if player has a pair
     write('Possible actions: h - Hit, s - Stand, d - Double down, p - Split'), nl,
     write('Your action > '), read_single_char_atom(Action),
-    dealt_player_action(Hand, Action).
+    choose_initial_action(Hand, Action).
 
-%! player_action(++Hand)
+%! choose_action(++Hand)
 %
 % Read player's action and execute it.
-player_action(Hand) :-
+choose_action(Hand) :-
     nl,
     write('Possible actions: h - Hit, s - Stand'), nl,
     write('Your action > '), read_single_char_atom(Action),
-    player_action(Hand, Action).
+    choose_action(Hand, Action).
 
-%! dealt_player_action(++Hand, ++Action).
+%! choose_initial_action(++Hand, ++Action).
 %
 % Handle player action after deal.
 %
@@ -291,25 +243,25 @@ player_action(Hand) :-
 % - 'p' Split
 %
 % For any other input, prompt again.
-dealt_player_action(Hand, d) :-
+choose_initial_action(Hand, d) :-
     !, write('Double down'), nl,
     % TODO: Implement double down
     write('Double down is not implemented'), nl,
-    dealt_player_action(Hand).
-dealt_player_action(Hand, p) :-
+    choose_initial_action(Hand).
+choose_initial_action(Hand, p) :-
     !, write('Split'), nl,
     % TODO: Implement split
     write('Split is not implemented'), nl,
-    dealt_player_action(Hand).
-dealt_player_action(Hand, h) :-
-    !, player_action(Hand, h).
-dealt_player_action(Hand, s) :-
-    !, player_action(Hand, s).
-dealt_player_action(Hand, Atom) :-
+    choose_initial_action(Hand).
+choose_initial_action(Hand, h) :-
+    !, choose_action(Hand, h).
+choose_initial_action(Hand, s) :-
+    !, choose_action(Hand, s).
+choose_initial_action(Hand, Atom) :-
     !, write(Atom), write(' - Invalid input'), nl,
-    dealt_player_action(Hand).
+    choose_initial_action(Hand).
 
-%! player_action(++Hand, ++Action).
+%! choose_action(++Hand, ++Action).
 %
 % Handle player action.
 %
@@ -319,7 +271,7 @@ dealt_player_action(Hand, Atom) :-
 % - 's' Stand
 %
 % For any other input, prompt again.
-player_action(Hand, h) :-
+choose_action(Hand, h) :-
     !, write('Hit'), nl,
     deck(Hand, Deck),
     player_cards(Hand, Cards),
@@ -329,12 +281,12 @@ player_action(Hand, h) :-
     NewHand = hand(NewCards, DealerCards, RemainingDeck),
     show_hand(NewHand),
     after_hit(NewHand).
-player_action(Hand, s) :-
+choose_action(Hand, s) :-
     !, write('Stand'), nl,
     dealer_actions(Hand).
-player_action(Hand, Atom) :-
+choose_action(Hand, Atom) :-
     !, write(Atom), write(' - Invalid input'), nl,
-    player_action(Hand).
+    choose_action(Hand).
 
 %! after_hit(++Hand)
 %
@@ -343,22 +295,22 @@ after_hit(Hand) :-
     player_has_21(Hand),
     !, dealer_actions(Hand).
 after_hit(Hand) :-
-    player_bust(Hand),
+    player_over_21(Hand),
     !, after_bust(Hand).
 after_hit(Hand) :-
-    !, player_action(Hand).
+    !, choose_action(Hand).
 
 %! after_bust(++Hand)
 %
 % Player has total over 21. Dealer wins.
-after_bust(Hand) :-
+after_bust(_Hand) :-
     % TODO: Show dealer cards.
     dealer_wins.
 
 %! dealer_actions(++Hand).
 %
 % Handle dealer's turn after player stands.
-dealer_actions(Hand) :-
+dealer_actions(_Hand) :-
     !, write('Dealer''s turn:'), nl.
 
 push :-
@@ -386,13 +338,18 @@ go :-
     show_banner, play_hand.
 
 
+%! main
+%
+% Command-line entry point
+main :-
+    % TODO: Handle errors, allow exit via
+    % Ctrl-C or Ctrl-D
+    go.
+
 %! ed.
 %
 % Open the `blackjack.pl` file in the editor.
 ed :- edit(blackjack).
-
-
-:- run_tests.
 
 
 % vim: set ts=8 sw=4 tw=0 et :
