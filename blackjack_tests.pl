@@ -7,7 +7,6 @@
     new_hand/1, cards_score/3
 ]).
 
-:- use_module(library(clpfd)).
 :- use_module(library(plunit)).
 
 
@@ -15,14 +14,14 @@
 
 test(deck) :-
     deck(Deck),
-    length(Deck, L), L #= 52,
+    length(Deck, L), L =:= 52,
     cards(Cards), forall(member(C, Deck), member(C, Cards)),
     [C1, C2, C3, C4|_] = Deck,
     C1 = 'A', C2 = '2', C3 = '3', C4 = '4'.
 
 test(shuffled_deck) :-
     shuffled_deck(Deck),
-    length(Deck, L), L #= 52,
+    length(Deck, L), L =:= 52,
     cards(Cards), forall(member(C, Deck), member(C, Cards)).
 
 :- end_tests(test_deck_and_shuffled_deck).
@@ -49,7 +48,7 @@ test(new_hand) :-
     member(P1, Cards), member(P2, Cards),
     member(D1, Cards), member(D2, Cards),
     !,
-    length(Deck, L), L #= 48.
+    length(Deck, L), L =:= 48.
 
 :- end_tests(new_hand).
 
