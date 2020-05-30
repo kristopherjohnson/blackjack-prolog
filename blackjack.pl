@@ -17,7 +17,6 @@
 
     :- use_module(library(apply)).
     :- use_module(library(clpfd)).
-    :- use_module(library(edit)).
     :- use_module(library(lists)).
     :- use_module(library(random)).
     :- use_module(library(readutil)).
@@ -25,34 +24,32 @@
 :- elif(current_prolog_flag(dialect, gprolog)).
 
     %% random_permutation(+List, -Permutation)
+    %
+    % Permutation is a random permutation of List.
     random_permutation(List, Permutation) :-
         randomize,
         length(List, Length),
-        random_permutation_aux(List, Length, [], Permutation).
+        random_permutation_aux(Length, List, [], Permutation).
 
-    random_permutation_aux(List, Length, Accum, Permutation) :-
-        (
-            (Length =:= 0) -> Permutation = Accum
-            ;
-            random(0, Length, RandomIndex),
-            remove_nth(RandomIndex, List, Element, NewList),
-            NewLength is Length - 1,
-            random_permutation_aux(NewList, NewLength, [Element|Accum], Permutation)
-        ).
+    random_permutation_aux(0, _, Accum, Accum) :- !.
+    random_permutation_aux(1, [H|_], Accum, [H|Accum]) :- !.
+    random_permutation_aux(Length, List, Accum, Permutation) :-
+        random(0, Length, RandomIndex),
+        remove_nth(RandomIndex, List, E, Rest),
+        DecLength #= Length - 1,
+        random_permutation_aux(DecLength, Rest, [E|Accum], Permutation).
 
-    %% remove_nth(+Index, ?List, ?Element, ?NewList)
+    %% remove_nth(?Index, ?List, ?Element, ?Remainder)
     %
-    % Element is the item at position Index in the List.
-    % NewList is the original list with the item at position Index removed.
-    remove_nth(Index, [Head|Tail], Element, NewList) :-
-        (
-            (Index =:= 0) -> NewList = Tail, Element = Head
-            ;
-            NewIndex is Index - 1,
-            remove_nth(NewIndex, Tail, Element, NewTail),
-            NewList = [Head|NewTail]
-        ).
+    % Element is the item at zero-based position Index in the List.
+    % Remainder is the remaining list after removing the item at position Index.
+    remove_nth(0, [H|T], H, T) :- !.
+    remove_nth(1, [H,E|T], E, [H|T]) :- !.
+    remove_nth(N, [H|T], E, [H|Rest]) :-
+        DecN #= N - 1,
+        remove_nth(DecN, T, E, Rest).
 
+    % TODO: Figure out how to get unbuffered input in GNU Prolog.
     get_single_char(Code) :- get_code(Code).
 
 :- endif.
@@ -232,7 +229,7 @@ play_hand :-
     show_hand(Hand),
     after_deal(Hand).
 
-%! dealt(++Hand)
+%! after_deal(++Hand)
 %
 % On a newly dealt hand, determine whether player or dealer has 21.
 %
