@@ -28,16 +28,20 @@
     % Permutation is a random permutation of List.
     random_permutation(List, Permutation) :-
         randomize,
-        length(List, Length),
-        random_permutation_aux(Length, List, [], Permutation).
+        length(List, N),
+        random_permutation_aux(N, List, [], Permutation).
 
-    random_permutation_aux(0, _, Accum, Accum) :- !.
-    random_permutation_aux(1, [H|_], Accum, [H|Accum]) :- !.
-    random_permutation_aux(Length, List, Accum, Permutation) :-
-        random(0, Length, RandomIndex),
+    %% random_permutation_aux(N, List, Acc, Permutation)
+    %
+    % Permutation is result of picking N items from List in random order and
+    % prepending them to Acc.
+    random_permutation_aux(0, _, Acc, Acc) :- !.
+    random_permutation_aux(1, [H|_], Acc, [H|Acc]) :- !.
+    random_permutation_aux(N, List, Acc, Permutation) :-
+        random(0, N, RandomIndex),
         remove_nth(RandomIndex, List, E, Rest),
-        DecLength #= Length - 1,
-        random_permutation_aux(DecLength, Rest, [E|Accum], Permutation).
+        DecN #= N - 1,
+        random_permutation_aux(DecN, Rest, [E|Acc], Permutation).
 
     %% remove_nth(?Index, ?List, ?Element, ?Remainder)
     %
