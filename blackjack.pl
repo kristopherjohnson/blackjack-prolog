@@ -6,19 +6,56 @@
  @license MIT
 */
 
-% Export the predicates tested by blackjack_tests.pl.
-:- module('blackjack', [
-    main/0,
-    deck/1, cards/1, shuffled_deck/1,
-    draw_card/3, new_hand/1, cards_score/3
-]).
+:- if(current_prolog_flag(dialect, swi)).
 
-:- use_module(library(apply)).
-:- use_module(library(clpfd)).
-:- use_module(library(edit)).
-:- use_module(library(lists)).
-:- use_module(library(random)).
-:- use_module(library(readutil)).
+    % Export the predicates tested by blackjack_tests.pl.
+    :- module('blackjack', [
+        main/0,
+        deck/1, cards/1, shuffled_deck/1,
+        draw_card/3, new_hand/1, cards_score/3
+    ]).
+
+    :- use_module(library(apply)).
+    :- use_module(library(clpfd)).
+    :- use_module(library(edit)).
+    :- use_module(library(lists)).
+    :- use_module(library(random)).
+    :- use_module(library(readutil)).
+
+:- elif(current_prolog_flag(dialect, gprolog)).
+
+    %% random_permutation(+List, -Permutation)
+    random_permutation(List, Permutation) :-
+        randomize,
+        length(List, Length),
+        random_permutation_aux(List, Length, [], Permutation).
+
+    random_permutation_aux(List, Length, Accum, Permutation) :-
+        (
+            (Length =:= 0) -> Permutation = Accum
+            ;
+            random(0, Length, RandomIndex),
+            remove_nth(RandomIndex, List, Element, NewList),
+            NewLength is Length - 1,
+            random_permutation_aux(NewList, NewLength, [Element|Accum], Permutation)
+        ).
+
+    %% remove_nth(+Index, ?List, ?Element, ?NewList)
+    %
+    % Element is the item at position Index in the List.
+    % NewList is the original list with the item at position Index removed.
+    remove_nth(Index, [Head|Tail], Element, NewList) :-
+        (
+            (Index =:= 0) -> NewList = Tail, Element = Head
+            ;
+            NewIndex is Index - 1,
+            remove_nth(NewIndex, Tail, Element, NewTail),
+            NewList = [Head|NewTail]
+        ).
+
+    get_single_char(Code) :- get_code(Code).
+
+:- endif.
 
 %! cards(--Cards:list)
 %
@@ -33,7 +70,7 @@ cards(Cards) :-
 % Returns a sorted list of 52 cards.
 deck(Deck) :-
     cards(Clubs), cards(Diamonds), cards(Hearts), cards(Spades),
-    append([Clubs, Diamonds, Hearts, Spades], Deck).
+    flatten([Clubs, Diamonds, Hearts, Spades], Deck).
 
 %! shuffled_deck(--ShuffledDeck:list)
 %
@@ -49,7 +86,7 @@ shuffled_deck(ShuffledDeck) :-
 % Undefined if _Deck_ is empty.
 draw_card([Top|Remainder], Top, Remainder).
 
-%! new_hand(Hand)
+%! new_hand(--Hand)
 %
 % Initial state of a newly dealt hand, including lists of dealt cards and remaining cards in deck.
 %
@@ -345,11 +382,6 @@ main :-
     % TODO: Handle errors, allow exit via
     % Ctrl-C or Ctrl-D
     go.
-
-%! ed.
-%
-% Open the `blackjack.pl` file in the editor.
-ed :- edit(blackjack).
 
 
 % vim: set ts=8 sw=4 tw=0 et :

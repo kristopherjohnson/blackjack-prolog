@@ -1,6 +1,11 @@
 #!/usr/bin/env swipl -g run_tests -t halt
 
 % Unit tests for blackjack.pl
+%
+% consult(blackjack_tests), run_tests.
+
+% These tests require SWI-Prolog's PlUnit test framework
+:- if(current_prolog_flag(dialect, swi)).
 
 :- use_module('blackjack.pl', [
     deck/1, cards/1, shuffled_deck/1, draw_card/3,
@@ -8,7 +13,6 @@
 ]).
 
 :- use_module(library(plunit)).
-
 
 :- begin_tests(test_deck_and_shuffled_deck).
 
@@ -67,6 +71,12 @@ test(hand_a_a_a)  :- cards_score(['A', 'A', 'A'],  13, true).
 
 :- end_tests(cards_score).
 
+:- else.  % if dialect is not swi
+
+    run_tests :-
+        write('Tests are not provided for this dialect of Prolog.'), nl.
+
+:- endif.
 
 % vim: set ts=8 sw=4 tw=0 et :
 % vim: set ft=swiprolog :

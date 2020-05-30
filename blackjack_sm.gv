@@ -6,7 +6,9 @@
 
 digraph blackjack {
 
-edge [ fontsize=10, color=gray, arrowtail=odot ];
+node [ fontname="helvetica", fontsize=16 ];
+
+edge [ fontname="helvetica", fontsize=10, color=gray ];
 
 go        [ style=bold ];
 game_over [ style=bold ];
@@ -31,19 +33,21 @@ after_deal -> choose_initial_action    [ label="play" ];
 choose_initial_action -> after_hit     [ label="hit" ];
 choose_initial_action -> dealer_turn   [ label="stand" ];
 
-after_hit -> dealer_wins               [ label="bust" ];
+after_hit -> after_bust                [ label="player_over_21" ];
 after_hit -> dealer_turn               [ label="player_has_21" ];
 after_hit -> choose_action             [ label="player_under_21" ];
 
 choose_action -> after_hit             [ label="hit" ];
 choose_action -> dealer_turn           [ label="stand" ];
 
+after_bust -> dealer_wins;
+
 dealer_turn -> after_dealer_hit        [ label="dealer_must_hit" ];
 dealer_turn -> after_dealer_stand      [ label="dealer_must_stand" ];
 
 after_dealer_hit -> after_dealer_hit   [ label="dealer_must_hit" ];
 after_dealer_hit -> after_dealer_stand [ label="dealer_must_stand" ];
-after_dealer_hit -> after_dealer_bust  [ label="dealer_bust" ];
+after_dealer_hit -> after_dealer_bust  [ label="dealer_over_21" ];
 
 after_dealer_stand -> player_wins      [ label="player_beats_dealer" ];
 after_dealer_stand -> dealer_wins      [ label="dealer_beats_player" ];
